@@ -39,7 +39,8 @@ public class User {
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
-
+    
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
