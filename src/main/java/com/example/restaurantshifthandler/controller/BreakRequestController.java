@@ -43,13 +43,14 @@ public class BreakRequestController {
 
         return ResponseEntity.ok(breaks);
     }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<BreakRequest> getById(@PathVariable Long id) {
-        return service.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
+     
+@GetMapping("/{id}")
+public ResponseEntity<BreakRequestDTO> getById(@PathVariable Long id) {
+    return service.findById(id)
+            .map(mapper::toDTO)
+            .map(ResponseEntity::ok)
+            .orElse(ResponseEntity.notFound().build());
+}
 
     @GetMapping("/shift/{shiftId}")
     public List<BreakRequest> getByShift(@PathVariable Long shiftId) {
