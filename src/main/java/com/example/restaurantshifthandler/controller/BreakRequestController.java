@@ -57,10 +57,13 @@ public ResponseEntity<BreakRequestDTO> getById(@PathVariable Long id) {
         return service.findByShift(shiftId);
     }
 
-    @GetMapping("/worker/{workerId}")
-    public List<BreakRequest> getByWorker(@PathVariable Long workerId) {
-        return service.findByWorker(workerId);
-    }
+   @GetMapping("/worker/{workerId}")
+public List<BreakRequestDTO> getByWorker(@PathVariable Long workerId) {
+    return service.findByWorker(workerId)
+            .stream()
+            .map(mapper::toDTO)
+            .collect(Collectors.toList());
+}
 
     @GetMapping("/status/{status}")
     public ResponseEntity<List<BreakRequest>> getByStatus(
