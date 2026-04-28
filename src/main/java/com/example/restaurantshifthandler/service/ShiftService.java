@@ -78,20 +78,21 @@ public class ShiftService {
         }).orElseThrow(() -> new RuntimeException("Shift not found: " + id));
     }
 
-    public Shift clockIn(Long id) {
-        return repository.findById(id).map(shift -> {
-            LocalDateTime now = LocalDateTime.now();
+  public Shift clockIn(Long id) {
+    return repository.findById(id).map(shift -> {
+        LocalDateTime now = LocalDateTime.now();
 
-            if (now.isBefore(shift.getScheduledStart())) {
-                throw new RuntimeException("Cannot clock in before scheduled start time!");
-            }
+        // Allow clock in up to 30 minutes early (timezone/clock tolerance)
+        LocalDateTime earlyWindow = shift.getScheduledStart().minusMinutes(30);
+        if (now.isBefore(earlyWindow)) {
+            throw new RuntimeException("Cannot clock in more than 30 minutes early!");
+        }
 
-            shift.setClockInTime(now);
-            shift.setStatus(ShiftStatus.ACTIVE);
-            return repository.save(shift);
-        }).orElseThrow(() -> new RuntimeException("Shift not found: " + id));
-    }
-
+        shift.setClockInTime(now);
+        shift.setStatus(ShiftStatus.ACTIVE);
+        return repository.save(shift);
+    }).orElseThrow(() -> new RuntimeException("Shift not found: " + id));
+}
     public Shift clockOut(Long id) {
         return repository.findById(id).map(shift -> {
             shift.setClockOutTime(LocalDateTime.now());
