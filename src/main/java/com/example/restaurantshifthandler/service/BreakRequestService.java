@@ -71,7 +71,7 @@ public class BreakRequestService {
                 .findByRestaurantIdAndRoleId(restaurantId, shiftRoleId)
                 .orElse(null);
 
-        if (rule != null && activeWorkers - 1 >= rule.getMinimumWorkers()) {
+        if (rule == null || activeWorkers - 1 >= rule.getMinimumWorkers()) {
             breakRequest.setStatus(BreakStatus.APPROVED);
             breakRequest.setStartTime(LocalDateTime.now());
             int durationMinutes = getBreakDuration(breakRequest.getBreakType());

@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
@@ -48,7 +47,6 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<?> create(@Valid @RequestBody UserDTO dto, BindingResult result, Authentication authentication) {
-
         // ✅ Check DTO validation errors
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
@@ -56,39 +54,26 @@ public class UserController {
                     .body(Map.of("error", errorMessage));
         }
 
-        // ✅ Check password is provided (required for CREATE)
-        if (dto.getPassword() == null || dto.getPassword().trim().isEmpty()) {
+        try {
+            // ✅ Get current user's restaurant
+            String email = authentication.getName();
+            User currentUser = service.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Long restaurantId = currentUser.getRestaurant().getId();
+
+            // ✅ Service handles all validation logic
+            User createdUser = service.save(dto, restaurantId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
+
+        } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Password is required"));
+                    .body(Map.of("error", e.getMessage()));
         }
-
-        // ✅ Check password length
-        if (dto.getPassword().length() < 8) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Password must be at least 8 characters"));
-        }
-
-        // ✅ Check if email already exists
-        if (service.existsByEmail(dto.getEmail())) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Email already exists"));
-        }
-
-        // ✅ Get current user's restaurant
-        String email = authentication.getName();
-        User currentUser = service.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Long restaurantId = currentUser.getRestaurant().getId();
-
-        // ✅ All good, create user
-        User createdUser = service.save(dto, restaurantId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody UserDTO dto, BindingResult result, Authentication authentication) {
-
         // ✅ Check DTO validation errors
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
@@ -96,93 +81,57 @@ public class UserController {
                     .body(Map.of("error", errorMessage));
         }
 
-        // ✅ Check if user exists
-        Optional<User> existingUserOpt = service.findById(id);
-        if (existingUserOpt.isEmpty()) {
+        try {
+            // ✅ Get current user's restaurant
+            String email = authentication.getName();
+            User currentUser = service.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            Long restaurantId = currentUser.getRestaurant().getId();
+
+            // ✅ Service handles all validation logic
+            User updatedUser = service.update(id, dto, restaurantId);
+            return ResponseEntity.ok(updatedUser);
+
+        } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "User not found"));
+                    .body(Map.of("error", e.getMessage()));
         }
-
-        User existingUser = existingUserOpt.get();
-
-        // ✅ Check password length IF password is being changed
-        if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
-            if (dto.getPassword().length() < 8) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Password must be at least 8 characters"));
-            }
-        }
-
-        // ✅ Check duplicate email ONLY if email changed
-        if (!existingUser.getEmail().equals(dto.getEmail())) {
-            // Email changed! Check if new email already exists
-            if (service.existsByEmail(dto.getEmail())) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Email already exists"));
-            }
-        }
-
-        // ✅ Get current user's restaurant
-        String email = authentication.getName();
-        User currentUser = service.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Long restaurantId = currentUser.getRestaurant().getId();
-
-        // ✅ All good, update user
-        User updatedUser = service.update(id, dto, restaurantId);
-        return ResponseEntity.ok(updatedUser);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User currentUser = service.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ✅ Check if user exists
-        Optional<User> userToDelete = service.findById(id);
-        if (userToDelete.isEmpty()) {
+            // ✅ Service handles validation (self-deletion, exists check)
+            service.deleteById(id, currentUser.getId());
+            return ResponseEntity.noContent().build();
+
+        } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "User not found"));
+                    .body(Map.of("error", e.getMessage()));
         }
-
-        String email = authentication.getName();
-        User currentUser = service.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // ✅ Prevent self-deletion
-        if (currentUser.getId().equals(id)) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "You cannot delete your own account"));
-        }
-
-        service.deleteById(id);
-        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/toggle-active")
     public ResponseEntity<?> toggleActive(@PathVariable Long id, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            User currentUser = service.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ✅ Check if user exists
-        Optional<User> userOpt = service.findById(id);
-        if (userOpt.isEmpty()) {
+            // ✅ Service handles validation (self-deactivation, exists check)
+            User updatedUser = service.toggleActive(id, currentUser.getId());
+            return ResponseEntity.ok(updatedUser);
+
+        } catch (RuntimeException e) {
             return ResponseEntity.badRequest()
-                    .body(Map.of("error", "User not found"));
+                    .body(Map.of("error", e.getMessage()));
         }
-
-        // ✅ Prevent self-deactivation
-        String email = authentication.getName();
-        User currentUser = service.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (currentUser.getId().equals(id)) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("error", "You cannot deactivate your own account"));
-        }
-
-        User updatedUser = service.toggleActive(id);
-        return ResponseEntity.ok(updatedUser);
     }
-
-
 }
 
 

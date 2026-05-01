@@ -1,4 +1,3 @@
-
 package com.example.restaurantshifthandler.service;
 
 import com.example.restaurantshifthandler.dto.UserDTO;
@@ -43,6 +42,19 @@ public class UserService {
     }
 
     public User save(UserDTO dto, Long restaurantId) {
+        // ✅ Validate password
+        if (dto.getPassword() == null || dto.getPassword().trim().isEmpty()) {
+            throw new RuntimeException("Password is required");
+        }
+        if (dto.getPassword().length() < 8) {
+            throw new RuntimeException("Password must be at least 8 characters");
+        }
+
+        // ✅ Check if email already exists
+        if (existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+
         User user = User.builder()
                 .name(dto.getName())
                 .email(dto.getEmail())
@@ -57,12 +69,37 @@ public class UserService {
         return repository.save(user);
     }
 
-    public void deleteById(Long id) {
+    public void deleteById(Long id, Long currentUserId) {
+        // ✅ Prevent self-deletion
+        if (currentUserId.equals(id)) {
+            throw new RuntimeException("You cannot delete your own account");
+        }
+
+        // ✅ Check if user exists
+        if (!repository.existsById(id)) {
+            throw new RuntimeException("User not found");
+        }
+
         repository.deleteById(id);
     }
 
     public User update(Long id, UserDTO dto, Long restaurantId) {
         return repository.findById(id).map(user -> {
+
+            // ✅ Validate password if being changed
+            if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
+                if (dto.getPassword().length() < 8) {
+                    throw new RuntimeException("Password must be at least 8 characters");
+                }
+            }
+
+            // ✅ Check duplicate email ONLY if email changed
+            if (!user.getEmail().equals(dto.getEmail())) {
+                if (existsByEmail(dto.getEmail())) {
+                    throw new RuntimeException("Email already exists");
+                }
+            }
+
             user.setName(dto.getName());
             user.setEmail(dto.getEmail());
             user.setRole(roleRepository.findById(dto.getRoleId())
@@ -79,14 +116,18 @@ public class UserService {
         }).orElseThrow(() -> new RuntimeException("User not found: " + id));
     }
 
-    public User toggleActive(Long id) {
+    public User toggleActive(Long id, Long currentUserId) {
+        // ✅ Prevent self-deactivation
+        if (currentUserId.equals(id)) {
+            throw new RuntimeException("You cannot deactivate your own account");
+        }
+
         return repository.findById(id).map(user -> {
             user.setIsActive(!user.getIsActive());
             return repository.save(user);
         }).orElseThrow(() -> new RuntimeException("User not found: " + id));
     }
 
-    // ✅ NEW: Check if email already exists
     public boolean existsByEmail(String email) {
         return repository.existsByEmail(email);
     }
