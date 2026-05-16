@@ -220,6 +220,4 @@ public class BreakRequestService {
     public List<BreakRequest> findByRestaurantIdAndStatusOrderByStartTimeDesc(Long restaurantId, BreakStatus status) {
         return repository.findByRestaurantIdAndStatusOrderByStartTimeDesc(restaurantId, status);
     }
-}git add .
-git commit -m "CRITICAL FIX: Consider active breaks when validating coverage"
-git push origin main
+}
