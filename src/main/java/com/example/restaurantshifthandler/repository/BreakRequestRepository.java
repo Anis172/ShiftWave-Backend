@@ -1,4 +1,3 @@
-
 package com.example.restaurantshifthandler.repository;
 
 import com.example.restaurantshifthandler.entity.BreakRequest;
@@ -22,4 +21,12 @@ public interface BreakRequestRepository extends JpaRepository<BreakRequest, Long
 
     @Query("SELECT br FROM BreakRequest br WHERE br.shift.restaurant.id = :restaurantId AND br.status = :status ORDER BY br.startTime DESC")
     List<BreakRequest> findByRestaurantIdAndStatusOrderByStartTimeDesc(@Param("restaurantId") Long restaurantId, @Param("status") BreakStatus status);
+
+    /**
+     * Count how many workers of a specific role are CURRENTLY on ACTIVE breaks
+     */
+    @Query("SELECT COUNT(br) FROM BreakRequest br " +
+            "WHERE br.shift.role.id = :roleId " +
+            "AND br.status = 'ACTIVE'")
+    int countActiveBreaksByRoleId(@Param("roleId") Long roleId);
 }

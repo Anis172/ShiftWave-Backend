@@ -62,16 +62,23 @@ public class BreakRequestService {
         Long shiftRoleId = breakRequest.getShift().getRole().getId();
         Long restaurantId = breakRequest.getShift().getRestaurant().getId();
 
-        // Count active workers with THIS SHIFT ROLE
+        // ✅ Count active workers with THIS SHIFT ROLE
         int activeWorkers = shiftRepository
                 .countByRoleIdAndStatus(shiftRoleId, ShiftStatus.ACTIVE);
+
+        // ✅ NEW: Count workers ALREADY on ACTIVE break with same role
+        int workersOnBreak = repository.countActiveBreaksByRoleId(shiftRoleId);
+
+        // ✅ Calculate available workers after approving THIS break
+        int workersAvailableAfter = activeWorkers - workersOnBreak - 1;
 
         // Get coverage rule for THIS SHIFT ROLE
         CoverageRule rule = coverageRuleRepository
                 .findByRestaurantIdAndRoleId(restaurantId, shiftRoleId)
                 .orElse(null);
 
-        if (rule == null || activeWorkers - 1 >= rule.getMinimumWorkers()) {
+        // ✅ FIXED: Check if enough workers will be available
+        if (rule == null || workersAvailableAfter >= rule.getMinimumWorkers()) {
             breakRequest.setStatus(BreakStatus.APPROVED);
             breakRequest.setStartTime(LocalDateTime.now());
             int durationMinutes = getBreakDuration(breakRequest.getBreakType());
@@ -84,7 +91,9 @@ public class BreakRequestService {
                     .type(AlertType.BREAK_DENIED)
                     .message("Break denied for " + fullWorker.getName()
                             + " - insufficient coverage for "
-                            + breakRequest.getShift().getRole().getName())
+                            + breakRequest.getShift().getRole().getName()
+                            + ". Need " + rule.getMinimumWorkers()
+                            + ", would have " + workersAvailableAfter + " if approved.")
                     .isRead(false)
                     .build();
 
@@ -93,11 +102,12 @@ public class BreakRequestService {
 
         return repository.save(breakRequest);
     }
+
     public void deleteById(Long id) {
         BreakRequest breakRequest = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Break request not found: " + id));
 
-        if (breakRequest.getStatus() == BreakStatus.ACTIVE||breakRequest.getStatus()==BreakStatus.COMPLETED) {
+        if (breakRequest.getStatus() == BreakStatus.ACTIVE || breakRequest.getStatus() == BreakStatus.COMPLETED) {
             throw new RuntimeException("Can only delete break requests with PENDING status!");
         }
 
@@ -210,4 +220,6 @@ public class BreakRequestService {
     public List<BreakRequest> findByRestaurantIdAndStatusOrderByStartTimeDesc(Long restaurantId, BreakStatus status) {
         return repository.findByRestaurantIdAndStatusOrderByStartTimeDesc(restaurantId, status);
     }
-}
+}git add .
+git commit -m "CRITICAL FIX: Consider active breaks when validating coverage"
+git push origin main
