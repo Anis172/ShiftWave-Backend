@@ -6,6 +6,7 @@ import com.example.restaurantshifthandler.entity.User;
 import com.example.restaurantshifthandler.repository.RestaurantRepository;
 import com.example.restaurantshifthandler.repository.RoleRepository;
 import com.example.restaurantshifthandler.repository.UserRepository;
+import com.example.restaurantshifthandler.security.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,7 @@ public class RestaurantRegistrationController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil; // ✅ ADDED THIS LINE
 
     @PostMapping
     @Transactional
@@ -64,9 +66,20 @@ public class RestaurantRegistrationController {
         manager.setRestaurant(savedRestaurant);
         manager.setIsActive(true);
         manager.setCreatedAt(LocalDateTime.now());
-        userRepository.save(manager);
+        User savedManager = userRepository.save(manager);
 
+        // ✅ GENERATE JWT TOKEN (NEW!)
+        String token = jwtUtil.generateToken(savedManager.getEmail());
+
+        // ✅ RETURN TOKEN + USER INFO (CHANGED!)
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(Map.of("message", "Restaurant registered successfully! You can now login."));
+                .body(Map.of(
+                    "message", "Restaurant registered successfully!",
+                    "token", token,
+                    "userId", savedManager.getId(),
+                    "email", savedManager.getEmail(),
+                    "name", savedManager.getName(),
+                    "role", "Manager"
+                ));
     }
 }
