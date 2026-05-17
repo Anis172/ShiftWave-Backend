@@ -27,14 +27,14 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, BindingResult result) {
 
-        // ✅ Check DTO validation errors (email format, required fields)
+
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
             return ResponseEntity.badRequest()
                     .body(Map.of("error", errorMessage));
         }
 
-        // ✅ Check if user exists
+
         Optional<User> userOptional = userService.findByEmail(request.getEmail());
         if (userOptional.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -43,19 +43,19 @@ public class AuthController {
 
         User user = userOptional.get();
 
-        // ✅ Check if password matches
+
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Invalid email or password"));
         }
 
-        // ✅ Check if user is active
+
         if (!user.getIsActive()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Account is inactive. Please contact your manager."));
         }
 
-        // ✅ All good! Generate token and return
+
         String token = jwtUtil.generateToken(user.getEmail());
 
         return ResponseEntity.ok(new LoginResponse(

@@ -42,7 +42,7 @@ public class UserService {
     }
 
     public User save(UserDTO dto, Long restaurantId) {
-        // ✅ Validate password
+
         if (dto.getPassword() == null || dto.getPassword().trim().isEmpty()) {
             throw new RuntimeException("Password is required");
         }
@@ -50,7 +50,7 @@ public class UserService {
             throw new RuntimeException("Password must be at least 8 characters");
         }
 
-        // ✅ Check if email already exists
+
         if (existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email already exists");
         }
@@ -70,12 +70,12 @@ public class UserService {
     }
 
     public void deleteById(Long id, Long currentUserId) {
-        // ✅ Prevent self-deletion
+
         if (currentUserId.equals(id)) {
             throw new RuntimeException("You cannot delete your own account");
         }
 
-        // ✅ Check if user exists
+
         if (!repository.existsById(id)) {
             throw new RuntimeException("User not found");
         }
@@ -86,14 +86,14 @@ public class UserService {
     public User update(Long id, UserDTO dto, Long restaurantId) {
         return repository.findById(id).map(user -> {
 
-            // ✅ Validate password if being changed
+
             if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
                 if (dto.getPassword().length() < 8) {
                     throw new RuntimeException("Password must be at least 8 characters");
                 }
             }
 
-            // ✅ Check duplicate email ONLY if email changed
+
             if (!user.getEmail().equals(dto.getEmail())) {
                 if (existsByEmail(dto.getEmail())) {
                     throw new RuntimeException("Email already exists");
@@ -117,7 +117,7 @@ public class UserService {
     }
 
     public User toggleActive(Long id, Long currentUserId) {
-        // ✅ Prevent self-deactivation
+        //  Prevent self-deactivation
         if (currentUserId.equals(id)) {
             throw new RuntimeException("You cannot deactivate your own account");
         }

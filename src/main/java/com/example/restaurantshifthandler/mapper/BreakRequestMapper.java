@@ -34,13 +34,13 @@ public class BreakRequestMapper {
                 .build();
     }
 
-    // ✅ NEW: Convert DTO to Entity
+
     public BreakRequest toEntity(BreakRequestDTO dto) {
         if (dto == null) {
             return null;
         }
 
-        // Fetch worker and shift from database
+
         User worker = userRepository.findById(dto.getWorkerId())
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
 

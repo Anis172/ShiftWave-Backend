@@ -35,20 +35,20 @@ public class RestaurantRegistrationController {
     @Transactional
     public ResponseEntity<?> registerRestaurant(@Valid @RequestBody RestaurantSignupDTO dto, BindingResult result) {
 
-        // ✅ Check DTO validation errors
+
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
             return ResponseEntity.badRequest()
                     .body(Map.of("error", errorMessage));
         }
 
-        // ✅ Check if email already exists
+
         if (userRepository.findByEmail(dto.getOwnerEmail()).isPresent()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Email already exists"));
         }
 
-        // ✅ Create restaurant
+
         Restaurant restaurant = new Restaurant();
         restaurant.setName(dto.getRestaurantName());
         restaurant.setAddress(dto.getAddress());
@@ -56,7 +56,7 @@ public class RestaurantRegistrationController {
         restaurant.setCreatedAt(LocalDateTime.now());
         Restaurant savedRestaurant = restaurantRepository.save(restaurant);
 
-        // ✅ Create manager user
+
         User manager = new User();
         manager.setName(dto.getOwnerName());
         manager.setEmail(dto.getOwnerEmail());
@@ -68,10 +68,10 @@ public class RestaurantRegistrationController {
         manager.setCreatedAt(LocalDateTime.now());
         User savedManager = userRepository.save(manager);
 
-        // ✅ GENERATE JWT TOKEN (NEW!)
+
         String token = jwtUtil.generateToken(savedManager.getEmail());
 
-        // ✅ RETURN TOKEN + USER INFO (CHANGED!)
+
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
                     "message", "Restaurant registered successfully!",

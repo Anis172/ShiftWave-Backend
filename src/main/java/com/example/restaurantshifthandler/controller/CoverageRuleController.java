@@ -52,21 +52,21 @@ public class CoverageRuleController {
     @PostMapping
     public ResponseEntity<?> create(@Valid @RequestBody CoverageRuleDTO dto, BindingResult result, Authentication authentication) {
 
-        // ✅ Check DTO validation errors
+
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
             return ResponseEntity.badRequest()
                     .body(Map.of("error", errorMessage));
         }
 
-        // ✅ Get current user's restaurant
+
         String email = authentication.getName();
         User currentUser = userService.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Long restaurantId = currentUser.getRestaurant().getId();
 
-        // ✅ All good, create rule
+
         CoverageRule createdRule = service.save(dto, restaurantId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdRule);
     }
@@ -74,28 +74,28 @@ public class CoverageRuleController {
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody CoverageRuleDTO dto, BindingResult result, Authentication authentication) {
 
-        // ✅ Check DTO validation errors
+
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
             return ResponseEntity.badRequest()
                     .body(Map.of("error", errorMessage));
         }
 
-        // ✅ Check: Rule exists
+
         Optional<CoverageRule> ruleOpt = service.findById(id);
         if (ruleOpt.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Coverage rule not found"));
         }
 
-        // ✅ Get current user's restaurant
+
         String email = authentication.getName();
         User currentUser = userService.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Long restaurantId = currentUser.getRestaurant().getId();
 
-        // ✅ All good, update rule
+
         CoverageRule updatedRule = service.update(id, dto, restaurantId);
         return ResponseEntity.ok(updatedRule);
     }
@@ -103,7 +103,7 @@ public class CoverageRuleController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
 
-        // ✅ Check: Rule exists
+
         Optional<CoverageRule> ruleOpt = service.findById(id);
         if (ruleOpt.isEmpty()) {
             return ResponseEntity.badRequest()

@@ -271,10 +271,10 @@ class UserServiceTest {
         when(restaurantRepository.findById(1L)).thenReturn(Optional.of(testRestaurant));
         when(repository.save(any(User.class))).thenReturn(testUser);
 
-        // Act
+
         User updatedUser = userService.update(1L, testUserDTO, 1L);
 
-        // Assert
+
         assertNotNull(updatedUser);
         verify(repository, times(1)).save(any(User.class));
     }
@@ -288,7 +288,7 @@ class UserServiceTest {
         when(repository.findById(1L)).thenReturn(Optional.of(testUser));
         when(repository.existsByEmail("new@test.com")).thenReturn(true);
 
-        // Act & Assert
+
         assertThrows(RuntimeException.class, () -> {
             userService.update(1L, testUserDTO, 1L);
         });

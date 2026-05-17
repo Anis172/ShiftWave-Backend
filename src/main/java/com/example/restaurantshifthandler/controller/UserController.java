@@ -55,14 +55,14 @@ public class UserController {
         }
 
         try {
-            // ✅ Get current user's restaurant
+
             String email = authentication.getName();
             User currentUser = service.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             Long restaurantId = currentUser.getRestaurant().getId();
 
-            // ✅ Service handles all validation logic
+
             User createdUser = service.save(dto, restaurantId);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
 
@@ -74,7 +74,7 @@ public class UserController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody UserDTO dto, BindingResult result, Authentication authentication) {
-        // ✅ Check DTO validation errors
+
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
             return ResponseEntity.badRequest()
@@ -82,14 +82,14 @@ public class UserController {
         }
 
         try {
-            // ✅ Get current user's restaurant
+
             String email = authentication.getName();
             User currentUser = service.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
             Long restaurantId = currentUser.getRestaurant().getId();
 
-            // ✅ Service handles all validation logic
+
             User updatedUser = service.update(id, dto, restaurantId);
             return ResponseEntity.ok(updatedUser);
 
@@ -106,7 +106,7 @@ public class UserController {
             User currentUser = service.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // ✅ Service handles validation (self-deletion, exists check)
+
             service.deleteById(id, currentUser.getId());
             return ResponseEntity.noContent().build();
 
@@ -123,7 +123,7 @@ public class UserController {
             User currentUser = service.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            // ✅ Service handles validation (self-deactivation, exists check)
+
             User updatedUser = service.toggleActive(id, currentUser.getId());
             return ResponseEntity.ok(updatedUser);
 

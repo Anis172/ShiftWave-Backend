@@ -103,13 +103,13 @@ public List<BreakRequestDTO> getByWorker(@PathVariable Long workerId) {
 
         User worker = workerOpt.get();
 
-        // ✅ Check: Worker is active
+
         if (!worker.getIsActive()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Your account is inactive. Please contact your manager."));
         }
 
-        // ✅ Check: Shift exists
+
         Optional<Shift> shiftOpt = shiftService.findById(dto.getShiftId());
         if (shiftOpt.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -133,12 +133,12 @@ public List<BreakRequestDTO> getByWorker(@PathVariable Long workerId) {
         // Convert DTO to entity
         BreakRequest breakRequest = mapper.toEntity(dto);
 
-        // ✅ All good, create break request (service will check coverage)
+
         try {
             BreakRequest createdBreak = service.save(breakRequest);
             return ResponseEntity.status(HttpStatus.CREATED).body(createdBreak);
         } catch (RuntimeException e) {
-            // Coverage check failed in service
+
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
         }
@@ -147,21 +147,21 @@ public List<BreakRequestDTO> getByWorker(@PathVariable Long workerId) {
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody BreakRequestDTO dto, BindingResult result) {
 
-        // ✅ Check DTO validation errors
+
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
             return ResponseEntity.badRequest()
                     .body(Map.of("error", errorMessage));
         }
 
-        // ✅ Check: Break request exists
+
         Optional<BreakRequest> breakOpt = service.findById(id);
         if (breakOpt.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Break request not found"));
         }
 
-        // Convert DTO to entity
+
         BreakRequest data = mapper.toEntity(dto);
 
         BreakRequest updatedBreak = service.update(id, data);
@@ -171,7 +171,7 @@ public List<BreakRequestDTO> getByWorker(@PathVariable Long workerId) {
     @PatchMapping("/{id}/approve")
     public ResponseEntity<?> approve(@PathVariable Long id) {
 
-        // ✅ Check: Break request exists
+
         Optional<BreakRequest> breakOpt = service.findById(id);
         if (breakOpt.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -191,7 +191,7 @@ public List<BreakRequestDTO> getByWorker(@PathVariable Long workerId) {
     @PatchMapping("/{id}/deny")
     public ResponseEntity<?> deny(@PathVariable Long id) {
 
-        // ✅ Check: Break request exists
+
         Optional<BreakRequest> breakOpt = service.findById(id);
         if (breakOpt.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -219,7 +219,7 @@ public List<BreakRequestDTO> getByWorker(@PathVariable Long workerId) {
     @PatchMapping("/{id}/complete")
     public ResponseEntity<?> complete(@PathVariable Long id) {
 
-        // ✅ Check: Break request exists
+
         Optional<BreakRequest> breakOpt = service.findById(id);
         if (breakOpt.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -233,7 +233,7 @@ public List<BreakRequestDTO> getByWorker(@PathVariable Long workerId) {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
 
-        // ✅ Check: Break request exists
+
         Optional<BreakRequest> breakOpt = service.findById(id);
         if (breakOpt.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -242,7 +242,7 @@ public List<BreakRequestDTO> getByWorker(@PathVariable Long workerId) {
 
         BreakRequest breakRequest = breakOpt.get();
 
-        // ✅ Check: Can only delete APPROVED breaks (not ACTIVE or COMPLETED)
+
         if (breakRequest.getStatus() == BreakStatus.ACTIVE ||
                 breakRequest.getStatus() == BreakStatus.COMPLETED) {
             return ResponseEntity.badRequest()

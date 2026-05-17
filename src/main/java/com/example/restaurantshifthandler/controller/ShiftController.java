@@ -63,21 +63,21 @@ public class ShiftController {
     @PostMapping
     public ResponseEntity<?> create(@Valid @RequestBody ShiftDTO dto, BindingResult result, Authentication authentication) {
 
-        // ✅ Check DTO validation errors
+
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
             return ResponseEntity.badRequest()
                     .body(Map.of("error", errorMessage));
         }
 
-        // ✅ Check: End time must be after start time
+
         if (dto.getScheduledEnd().isBefore(dto.getScheduledStart()) ||
                 dto.getScheduledEnd().isEqual(dto.getScheduledStart())) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "End time must be after start time"));
         }
 
-        // ✅ Check: Worker exists
+
         Optional<User> workerOpt = userService.findById(dto.getWorkerId());
         if (workerOpt.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -86,26 +86,25 @@ public class ShiftController {
 
         User worker = workerOpt.get();
 
-        // ✅ Check: Worker is active
+
         if (!worker.getIsActive()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Cannot create shift for inactive worker. Please activate the worker first."));
         }
 
-        // ✅ Get current user's restaurant
+
         String email = authentication.getName();
         User currentUser = userService.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Long restaurantId = currentUser.getRestaurant().getId();
 
-        // ✅ Check: Worker belongs to same restaurant
         if (!worker.getRestaurant().getId().equals(restaurantId)) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Worker does not belong to your restaurant"));
         }
 
-        // ✅ All good, create shift
+
         Shift createdShift = service.save(dto, restaurantId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdShift);
     }
@@ -113,28 +112,28 @@ public class ShiftController {
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody ShiftDTO dto, BindingResult result, Authentication authentication) {
 
-        // ✅ Check DTO validation errors
+
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
             return ResponseEntity.badRequest()
                     .body(Map.of("error", errorMessage));
         }
 
-        // ✅ Check: Shift exists
+
         Optional<Shift> existingShiftOpt = service.findById(id);
         if (existingShiftOpt.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Shift not found"));
         }
 
-        // ✅ Check: End time must be after start time
+
         if (dto.getScheduledEnd().isBefore(dto.getScheduledStart()) ||
                 dto.getScheduledEnd().isEqual(dto.getScheduledStart())) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "End time must be after start time"));
         }
 
-        // ✅ Check: Worker exists
+
         Optional<User> workerOpt = userService.findById(dto.getWorkerId());
         if (workerOpt.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -143,26 +142,26 @@ public class ShiftController {
 
         User worker = workerOpt.get();
 
-        // ✅ Check: Worker is active
+
         if (!worker.getIsActive()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Cannot assign shift to inactive worker"));
         }
 
-        // ✅ Get current user's restaurant
+
         String email = authentication.getName();
         User currentUser = userService.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Long restaurantId = currentUser.getRestaurant().getId();
 
-        // ✅ Check: Worker belongs to same restaurant
+
         if (!worker.getRestaurant().getId().equals(restaurantId)) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Worker does not belong to your restaurant"));
         }
 
-        // ✅ All good, update shift
+
         Shift updatedShift = service.update(id, dto, restaurantId);
         return ResponseEntity.ok(updatedShift);
     }
@@ -170,7 +169,7 @@ public class ShiftController {
     @PatchMapping("/{id}/clock-in")
     public ResponseEntity<?> clockIn(@PathVariable Long id) {
 
-        // ✅ Check: Shift exists
+
         Optional<Shift> shiftOpt = service.findById(id);
         if (shiftOpt.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -179,7 +178,7 @@ public class ShiftController {
 
         Shift shift = shiftOpt.get();
 
-        // ✅ Check: Worker is active
+
         if (!shift.getWorker().getIsActive()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Your account is inactive. Please contact your manager."));
@@ -192,7 +191,7 @@ public class ShiftController {
     @PatchMapping("/{id}/clock-out")
     public ResponseEntity<?> clockOut(@PathVariable Long id) {
 
-        // ✅ Check: Shift exists
+
         Optional<Shift> shiftOpt = service.findById(id);
         if (shiftOpt.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -206,7 +205,7 @@ public class ShiftController {
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<?> cancel(@PathVariable Long id) {
 
-        // ✅ Check: Shift exists
+
         Optional<Shift> shiftOpt = service.findById(id);
         if (shiftOpt.isEmpty()) {
             return ResponseEntity.badRequest()
@@ -220,7 +219,7 @@ public class ShiftController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
 
-        // ✅ Check: Shift exists
+
         Optional<Shift> shiftOpt = service.findById(id);
         if (shiftOpt.isEmpty()) {
             return ResponseEntity.badRequest()

@@ -43,7 +43,7 @@ public class BreakRequestService {
 
         breakRequest.setWorker(fullWorker);
 
-        // ✅ Check if worker already has an active/pending/approved break
+        //  Check if worker already has an active/pending/approved break
         List<BreakRequest> existingBreaks = repository.findByWorkerId(fullWorker.getId());
 
         for (BreakRequest existing : existingBreaks) {
@@ -58,18 +58,18 @@ public class BreakRequestService {
             }
         }
 
-        // ✅ Get role from SHIFT, not from USER
+        //  Get role from SHIFT, not from USER
         Long shiftRoleId = breakRequest.getShift().getRole().getId();
         Long restaurantId = breakRequest.getShift().getRestaurant().getId();
 
-        // ✅ Count active workers with THIS SHIFT ROLE
+        //  Count active workers with THIS SHIFT ROLE
         int activeWorkers = shiftRepository
                 .countByRoleIdAndStatus(shiftRoleId, ShiftStatus.ACTIVE);
 
-        // ✅ NEW: Count workers ALREADY on ACTIVE break with same role
+        //  NEW: Count workers ALREADY on ACTIVE break with same role
         int workersOnBreak = repository.countActiveBreaksByRoleId(shiftRoleId);
 
-        // ✅ Calculate available workers after approving THIS break
+        //  Calculate available workers after approving THIS break
         int workersAvailableAfter = activeWorkers - workersOnBreak - 1;
 
         // Get coverage rule for THIS SHIFT ROLE
@@ -77,7 +77,7 @@ public class BreakRequestService {
                 .findByRestaurantIdAndRoleId(restaurantId, shiftRoleId)
                 .orElse(null);
 
-        // ✅ FIXED: Check if enough workers will be available
+        //  FIXED: Check if enough workers will be available
         if (rule == null || workersAvailableAfter >= rule.getMinimumWorkers()) {
             breakRequest.setStatus(BreakStatus.APPROVED);
             breakRequest.setStartTime(LocalDateTime.now());
