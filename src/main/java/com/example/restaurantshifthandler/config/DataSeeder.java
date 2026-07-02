@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Component
@@ -22,44 +21,25 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedRoles() {
         if (roleRepository.count() == 0) {
-            List<RoleData> roles = Arrays.asList(
-                    new RoleData("Head Chef", "Kitchen"),
-                    new RoleData("Sous Chef", "Kitchen"),
-                    new RoleData("Line Cook", "Kitchen"),
-                    new RoleData("Prep Cook", "Kitchen"),
-                    new RoleData("Dishwasher", "Kitchen"),
-                    new RoleData("Waiter/Server", "Floor"),
-                    new RoleData("Host/Hostess", "Floor"),
-                    new RoleData("Busboy", "Floor"),
-                    new RoleData("Bartender", "Bar"),
-                    new RoleData("Barback", "Bar"),
-                    new RoleData("Manager", "Management"),
-                    new RoleData("Shift Supervisor", "Management"),
-                    new RoleData("Cashier", "Other"),
-                    new RoleData("Delivery Driver", "Other")
-            );
-
-            roles.forEach(roleData -> {
-                Role role = Role.builder()
-                        .name(roleData.name)
-                        .department(roleData.department)
-                        .build();
-                roleRepository.save(role);
-            });
-
-            System.out.println("✅ Roles seeded successfully!");
+            roleRepository.saveAll(List.of(
+                    Role.builder().name("Head Chef").department("Kitchen").build(),
+                    Role.builder().name("Sous Chef").department("Kitchen").build(),
+                    Role.builder().name("Line Cook").department("Kitchen").build(),
+                    Role.builder().name("Prep Cook").department("Kitchen").build(),
+                    Role.builder().name("Dishwasher").department("Kitchen").build(),
+                    Role.builder().name("Waiter/Server").department("Floor").build(),
+                    Role.builder().name("Host/Hostess").department("Floor").build(),
+                    Role.builder().name("Busboy").department("Floor").build(),
+                    Role.builder().name("Bartender").department("Bar").build(),
+                    Role.builder().name("Barback").department("Bar").build(),
+                    Role.builder().name("Manager").department("Management").build(),
+                    Role.builder().name("Shift Supervisor").department("Management").build(),
+                    Role.builder().name("Cashier").department("Other").build(),
+                    Role.builder().name("Delivery Driver").department("Other").build()
+            ));
+            System.out.println("Roles seeded successfully!");
         } else {
-            System.out.println("ℹ️ Roles already exist, skipping seed.");
-        }
-    }
-
-    private static class RoleData {
-        String name;
-        String department;
-
-        RoleData(String name, String department) {
-            this.name = name;
-            this.department = department;
+            System.out.println("Roles already exist, skipping seed.");
         }
     }
 }
