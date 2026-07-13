@@ -1,10 +1,11 @@
 package com.example.restaurantshifthandler.controller;
 
 import com.example.restaurantshifthandler.dto.LoginRequest;
-import com.example.restaurantshifthandler.dto.LoginResponse;
 import com.example.restaurantshifthandler.entity.User;
 import com.example.restaurantshifthandler.security.JwtUtil;
 import com.example.restaurantshifthandler.service.UserService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -25,15 +26,16 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request, BindingResult result) {
-
+    public ResponseEntity<?> login(
+            @Valid @RequestBody LoginRequest request,
+            BindingResult result,
+            HttpServletResponse response) {
 
         if (result.hasErrors()) {
             String errorMessage = result.getAllErrors().get(0).getDefaultMessage();
             return ResponseEntity.badRequest()
                     .body(Map.of("error", errorMessage));
         }
-
 
         Optional<User> userOptional = userService.findByEmail(request.getEmail());
         if (userOptional.isEmpty()) {
@@ -43,27 +45,42 @@ public class AuthController {
 
         User user = userOptional.get();
 
-
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Invalid email or password"));
         }
-
 
         if (!user.getIsActive()) {
             return ResponseEntity.badRequest()
                     .body(Map.of("error", "Account is inactive. Please contact your manager."));
         }
 
-
         String token = jwtUtil.generateToken(user.getEmail());
 
-        return ResponseEntity.ok(new LoginResponse(
-                user.getId(),
-                token,
-                user.getEmail(),
-                user.getName(),
-                user.getRole().getName()
+        Cookie cookie = new Cookie("token", token);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(60 * 60 * 10);
+        response.addCookie(cookie);
+
+        return ResponseEntity.ok(Map.of(
+                "userId", user.getId(),
+                "email", user.getEmail(),
+                "name", user.getName(),
+                "role", user.getRole().getName()
         ));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletResponse response) {
+        Cookie cookie = new Cookie("token", null);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath("/");
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
     }
 }
