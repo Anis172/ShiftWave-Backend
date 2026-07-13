@@ -1,7 +1,5 @@
 package com.example.restaurantshifthandler.controller;
 
-
-
 import com.example.restaurantshifthandler.dto.LoginRequest;
 import com.example.restaurantshifthandler.entity.User;
 import com.example.restaurantshifthandler.entity.Role;
@@ -12,7 +10,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -27,12 +24,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
-@AutoConfigureMockMvc(addFilters = false) // Disable security for testing
+@AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
 
     private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -66,7 +62,7 @@ class AuthControllerTest {
                 .id(1L)
                 .name("John Doe")
                 .email("john@test.com")
-                .password("$2a$10$hashedPassword") // BCrypt hashed password
+                .password("$2a$10$hashedPassword")
                 .role(testRole)
                 .restaurant(testRestaurant)
                 .isActive(true)
@@ -79,18 +75,18 @@ class AuthControllerTest {
     }
 
     @Test
-    void testLogin_ValidCredentials_ReturnsTokenAndUserInfo() throws Exception {
-        // Arrange
+    void testLogin_ValidCredentials_ReturnsCookieAndUserInfo() throws Exception {
         when(userService.findByEmail("john@test.com")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", testUser.getPassword())).thenReturn(true);
         when(jwtUtil.generateToken("john@test.com")).thenReturn("mock-jwt-token");
 
-        // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validLoginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("mock-jwt-token"))
+                .andExpect(cookie().exists("token"))
+                .andExpect(cookie().httpOnly("token", true))
+                .andExpect(jsonPath("$.token").doesNotExist())
                 .andExpect(jsonPath("$.email").value("john@test.com"))
                 .andExpect(jsonPath("$.name").value("John Doe"))
                 .andExpect(jsonPath("$.role").value("Manager"));
@@ -102,7 +98,6 @@ class AuthControllerTest {
 
     @Test
     void testLogin_InvalidEmail_ReturnsError() throws Exception {
-        // Arrange
         when(userService.findByEmail("nonexistent@test.com")).thenReturn(Optional.empty());
 
         LoginRequest invalidRequest = LoginRequest.builder()
@@ -110,7 +105,6 @@ class AuthControllerTest {
                 .password("password123")
                 .build();
 
-        // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
@@ -123,7 +117,6 @@ class AuthControllerTest {
 
     @Test
     void testLogin_InvalidPassword_ReturnsError() throws Exception {
-        // Arrange
         when(userService.findByEmail("john@test.com")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("wrongpassword", testUser.getPassword())).thenReturn(false);
 
@@ -132,7 +125,6 @@ class AuthControllerTest {
                 .password("wrongpassword")
                 .build();
 
-        // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(wrongPasswordRequest)))
@@ -146,12 +138,10 @@ class AuthControllerTest {
 
     @Test
     void testLogin_InactiveUser_ReturnsError() throws Exception {
-        // Arrange
-        testUser.setIsActive(false); // Deactivated user
+        testUser.setIsActive(false);
         when(userService.findByEmail("john@test.com")).thenReturn(Optional.of(testUser));
         when(passwordEncoder.matches("password123", testUser.getPassword())).thenReturn(true);
 
-        // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validLoginRequest)))
@@ -165,12 +155,10 @@ class AuthControllerTest {
 
     @Test
     void testLogin_MissingEmail_ReturnsValidationError() throws Exception {
-        // Arrange
         LoginRequest missingEmailRequest = LoginRequest.builder()
                 .password("password123")
                 .build();
 
-        // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(missingEmailRequest)))
@@ -182,12 +170,10 @@ class AuthControllerTest {
 
     @Test
     void testLogin_MissingPassword_ReturnsValidationError() throws Exception {
-        // Arrange
         LoginRequest missingPasswordRequest = LoginRequest.builder()
                 .email("john@test.com")
                 .build();
 
-        // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(missingPasswordRequest)))
@@ -199,13 +185,11 @@ class AuthControllerTest {
 
     @Test
     void testLogin_InvalidEmailFormat_ReturnsValidationError() throws Exception {
-        // Arrange
         LoginRequest invalidEmailRequest = LoginRequest.builder()
                 .email("notanemail")
                 .password("password123")
                 .build();
 
-        // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidEmailRequest)))
