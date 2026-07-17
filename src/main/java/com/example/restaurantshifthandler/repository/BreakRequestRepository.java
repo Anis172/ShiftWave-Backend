@@ -2,11 +2,14 @@ package com.example.restaurantshifthandler.repository;
 
 import com.example.restaurantshifthandler.entity.BreakRequest;
 import com.example.restaurantshifthandler.entity.enums.BreakStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -29,4 +32,20 @@ public interface BreakRequestRepository extends JpaRepository<BreakRequest, Long
             "WHERE br.shift.role.id = :roleId " +
             "AND br.status = 'ACTIVE'")
     int countActiveBreaksByRoleId(@Param("roleId") Long roleId);
+
+    @Query("SELECT br FROM BreakRequest br " +
+            "WHERE br.shift.restaurant.id = :restaurantId " +
+            "AND br.status = 'COMPLETED' " +
+            "AND (:workerName IS NULL OR LOWER(br.worker.name) LIKE LOWER(CONCAT('%', :workerName, '%'))) " +
+            "AND (:roleId IS NULL OR br.shift.role.id = :roleId) " +
+            "AND (:startDate IS NULL OR br.startTime >= :startDate) " +
+            "AND (:endDate IS NULL OR br.startTime <= :endDate) " +
+            "ORDER BY br.startTime DESC")
+    Page<BreakRequest> findBreakHistory(
+            @Param("restaurantId") Long restaurantId,
+            @Param("workerName") String workerName,
+            @Param("roleId") Long roleId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable);
 }

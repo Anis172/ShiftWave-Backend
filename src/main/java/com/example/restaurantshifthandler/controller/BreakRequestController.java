@@ -1,5 +1,6 @@
 package com.example.restaurantshifthandler.controller;
 
+import com.example.restaurantshifthandler.dto.BreakHistoryResponseDTO;
 import com.example.restaurantshifthandler.dto.BreakRequestDTO;
 import com.example.restaurantshifthandler.entity.BreakRequest;
 import com.example.restaurantshifthandler.entity.Shift;
@@ -11,9 +12,11 @@ import com.example.restaurantshifthandler.service.ShiftService;
 import com.example.restaurantshifthandler.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +24,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.example.restaurantshifthandler.dto.BreakHistoryResponseDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/break-requests")
@@ -42,6 +50,37 @@ public class BreakRequestController {
         List<BreakRequest> breaks = service.findByRestaurantId(restaurantId);
 
         return ResponseEntity.ok(breaks);
+    }
+    @GetMapping("/history/paginated")
+    public ResponseEntity<Page<BreakHistoryResponseDTO>> getBreakHistoryPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String workerName,
+            @RequestParam(required = false) Long roleId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User currentUser = userService.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Long restaurantId = currentUser.getRestaurant().getId();
+
+        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDateTime = endDate != null ? endDate.atTime(23, 59, 59) : null;
+
+        Page<BreakHistoryResponseDTO> result = service.findBreakHistory(
+                restaurantId,
+                workerName,
+                roleId,
+                startDateTime,
+                endDateTime,
+                page,
+                size
+        );
+
+        return ResponseEntity.ok(result);
     }
      
 @GetMapping("/{id}")

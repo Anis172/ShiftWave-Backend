@@ -1,5 +1,6 @@
 package com.example.restaurantshifthandler.service;
 
+import com.example.restaurantshifthandler.dto.BreakHistoryResponseDTO;
 import com.example.restaurantshifthandler.entity.Alert;
 import com.example.restaurantshifthandler.entity.BreakRequest;
 import com.example.restaurantshifthandler.entity.CoverageRule;
@@ -13,6 +14,9 @@ import com.example.restaurantshifthandler.repository.CoverageRuleRepository;
 import com.example.restaurantshifthandler.repository.ShiftRepository;
 import com.example.restaurantshifthandler.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -219,5 +223,36 @@ public class BreakRequestService {
 
     public List<BreakRequest> findByRestaurantIdAndStatusOrderByStartTimeDesc(Long restaurantId, BreakStatus status) {
         return repository.findByRestaurantIdAndStatusOrderByStartTimeDesc(restaurantId, status);
+    }
+    public Page<BreakHistoryResponseDTO> findBreakHistory(
+            Long restaurantId,
+            String workerName,
+            Long roleId,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            int page,
+            int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<BreakRequest> breaks = repository.findBreakHistory(
+                restaurantId,
+                workerName,
+                roleId,
+                startDate,
+                endDate,
+                pageable
+        );
+
+        return breaks.map(br -> BreakHistoryResponseDTO.builder()
+                .id(br.getId())
+                .workerName(br.getWorker().getName())
+                .roleName(br.getShift().getRole().getName())
+                .breakType(br.getBreakType())
+                .status(br.getStatus())
+                .requestedAt(br.getRequestedAt())
+                .startTime(br.getStartTime())
+                .endTime(br.getEndTime())
+                .build());
     }
 }

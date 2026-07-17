@@ -1,6 +1,7 @@
 package com.example.restaurantshifthandler.controller;
 
 import com.example.restaurantshifthandler.dto.ShiftDTO;
+import com.example.restaurantshifthandler.dto.ShiftResponseDTO;
 import com.example.restaurantshifthandler.entity.Shift;
 import com.example.restaurantshifthandler.entity.User;
 import com.example.restaurantshifthandler.entity.enums.ShiftStatus;
@@ -8,13 +9,24 @@ import com.example.restaurantshifthandler.exception.ResourceNotFoundException;
 import com.example.restaurantshifthandler.service.ShiftService;
 import com.example.restaurantshifthandler.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import com.example.restaurantshifthandler.dto.ShiftResponseDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.RequestParam;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import jakarta.validation.Valid;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -183,5 +195,39 @@ public class ShiftController {
 
         service.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/paginated")
+    public ResponseEntity<Page<ShiftResponseDTO>> getShiftsPaginated(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String workerName,
+            @RequestParam(required = false) Long roleId,
+            @RequestParam(required = false) ShiftStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        // Get email from SecurityContextHolder instead of Authentication parameter
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        User currentUser = userService.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Long restaurantId = currentUser.getRestaurant().getId();
+
+        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDateTime = endDate != null ? endDate.atTime(23, 59, 59) : null;
+
+        Page<ShiftResponseDTO> result = service.findShiftsPaginated(
+                restaurantId,
+                workerName,
+                roleId,
+                status,
+                startDateTime,
+                endDateTime,
+                page,
+                size
+        );
+
+        return ResponseEntity.ok(result);
     }
 }

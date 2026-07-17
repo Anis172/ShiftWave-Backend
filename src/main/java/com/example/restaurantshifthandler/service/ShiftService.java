@@ -1,6 +1,7 @@
 package com.example.restaurantshifthandler.service;
 
 import com.example.restaurantshifthandler.dto.ShiftDTO;
+import com.example.restaurantshifthandler.dto.ShiftResponseDTO;
 import com.example.restaurantshifthandler.entity.Shift;
 import com.example.restaurantshifthandler.entity.enums.ShiftStatus;
 import com.example.restaurantshifthandler.repository.ShiftRepository;
@@ -8,6 +9,9 @@ import com.example.restaurantshifthandler.repository.UserRepository;
 import com.example.restaurantshifthandler.repository.RoleRepository;
 import com.example.restaurantshifthandler.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -131,5 +135,38 @@ public Shift clockIn(Long id) {
                 repository.save(shift);
             }
         }
+    }
+    public Page<ShiftResponseDTO> findShiftsPaginated(
+            Long restaurantId,
+            String workerName,
+            Long roleId,
+            ShiftStatus status,
+            LocalDateTime startDate,
+            LocalDateTime endDate,
+            int page,
+            int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Shift> shifts = repository.findShiftsPaginated(
+                restaurantId,
+                workerName,
+                roleId,
+                status,
+                startDate,
+                endDate,
+                pageable
+        );
+
+        return shifts.map(shift -> ShiftResponseDTO.builder()
+                .id(shift.getId())
+                .workerName(shift.getWorker().getName())
+                .roleName(shift.getRole().getName())
+                .status(shift.getStatus())
+                .scheduledStart(shift.getScheduledStart())
+                .scheduledEnd(shift.getScheduledEnd())
+                .clockInTime(shift.getClockInTime())
+                .clockOutTime(shift.getClockOutTime())
+                .build());
     }
 }
