@@ -1,7 +1,6 @@
 package com.example.restaurantshifthandler.dto;
 
-
-
+import com.example.restaurantshifthandler.entity.enums.SalaryType;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -12,7 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-
 public class UserDTO {
 
     private Long id;
@@ -25,14 +23,18 @@ public class UserDTO {
     @Email(message = "Email must be valid")
     private String email;
 
-
     private String password;
 
     @NotNull(message = "Role is required")
     private Long roleId;
 
-
     private Long restaurantId;
 
     private Boolean isActive;
+
+    // Salary fields (all optional)
+    private SalaryType salaryType;
+    private Double hourlyRate;
+    private Double dailyRate;
+    private Double monthlySalary;
 }

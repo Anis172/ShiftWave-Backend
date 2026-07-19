@@ -1,12 +1,14 @@
 package com.example.restaurantshifthandler.service;
 
 import com.example.restaurantshifthandler.dto.UserDTO;
-import com.example.restaurantshifthandler.entity.User;
 import com.example.restaurantshifthandler.entity.Restaurant;
 import com.example.restaurantshifthandler.entity.Role;
-import com.example.restaurantshifthandler.repository.UserRepository;
-import com.example.restaurantshifthandler.repository.RoleRepository;
+import com.example.restaurantshifthandler.entity.User;
+import com.example.restaurantshifthandler.entity.enums.SalaryType;
+import com.example.restaurantshifthandler.exception.ResourceNotFoundException;
 import com.example.restaurantshifthandler.repository.RestaurantRepository;
+import com.example.restaurantshifthandler.repository.RoleRepository;
+import com.example.restaurantshifthandler.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,11 +17,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.Optional;
 import java.util.List;
-import java.util.Arrays;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,21 +33,21 @@ class UserServiceTest {
     private UserRepository repository;
 
     @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
     private RoleRepository roleRepository;
 
     @Mock
     private RestaurantRepository restaurantRepository;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private UserService userService;
 
     private User testUser;
-    private UserDTO testUserDTO;
-    private Restaurant testRestaurant;
     private Role testRole;
+    private Restaurant testRestaurant;
+    private UserDTO testUserDTO;
 
     @BeforeEach
     void setUp() {
@@ -54,14 +58,14 @@ class UserServiceTest {
 
         testRole = Role.builder()
                 .id(1L)
-                .name("Line Cook")
+                .name("Manager")
                 .build();
 
         testUser = User.builder()
                 .id(1L)
                 .name("John Doe")
                 .email("john@test.com")
-                .password("hashedPassword")
+                .password("$2a$10$hashedPassword")
                 .role(testRole)
                 .restaurant(testRestaurant)
                 .isActive(true)
@@ -77,259 +81,238 @@ class UserServiceTest {
     }
 
     @Test
-    void testSave_Success() {
-        // Arrange
-        when(repository.existsByEmail("john@test.com")).thenReturn(false);
-        when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
-        when(restaurantRepository.findById(1L)).thenReturn(Optional.of(testRestaurant));
-        when(passwordEncoder.encode("password123")).thenReturn("hashedPassword");
-        when(repository.save(any(User.class))).thenReturn(testUser);
+    void testFindAll_ReturnsAllUsers() {
+        when(repository.findAll()).thenReturn(List.of(testUser));
 
-        // Act
-        User savedUser = userService.save(testUserDTO, 1L);
+        List<User> result = userService.findAll();
 
-        // Assert
-        assertNotNull(savedUser);
-        assertEquals("John Doe", savedUser.getName());
-        assertEquals("john@test.com", savedUser.getEmail());
-        verify(repository, times(1)).save(any(User.class));
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("John Doe");
+        verify(repository, times(1)).findAll();
     }
 
     @Test
-    void testSave_EmailAlreadyExists_ThrowsException() {
-        // Arrange
-        when(repository.existsByEmail("john@test.com")).thenReturn(true);
-
-        // Act & Assert
-        assertThrows(RuntimeException.class, () -> {
-            userService.save(testUserDTO, 1L);
-        });
-    }
-
-    @Test
-    void testSave_PasswordTooShort_ThrowsException() {
-        // Arrange
-        testUserDTO.setPassword("short");
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.save(testUserDTO, 1L);
-        });
-        assertEquals("Password must be at least 8 characters", exception.getMessage());
-    }
-
-    @Test
-    void testSave_PasswordNull_ThrowsException() {
-        // Arrange
-        testUserDTO.setPassword(null);
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.save(testUserDTO, 1L);
-        });
-        assertEquals("Password is required", exception.getMessage());
-    }
-
-    @Test
-    void testSave_PasswordEmpty_ThrowsException() {
-        // Arrange
-        testUserDTO.setPassword("   ");
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.save(testUserDTO, 1L);
-        });
-        assertEquals("Password is required", exception.getMessage());
-    }
-
-    @Test
-    void testFindById_UserExists_ReturnsUser() {
-        // Arrange
+    void testFindById_ExistingId_ReturnsUser() {
         when(repository.findById(1L)).thenReturn(Optional.of(testUser));
 
-        // Act
         Optional<User> result = userService.findById(1L);
 
-        // Assert
-        assertTrue(result.isPresent());
-        assertEquals("John Doe", result.get().getName());
+        assertThat(result).isPresent();
+        assertThat(result.get().getName()).isEqualTo("John Doe");
         verify(repository, times(1)).findById(1L);
     }
 
     @Test
-    void testFindById_UserNotFound_ReturnsEmpty() {
-        // Arrange
-        when(repository.findById(999L)).thenReturn(Optional.empty());
+    void testFindById_NonExistingId_ReturnsEmpty() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
 
-        // Act
-        Optional<User> result = userService.findById(999L);
+        Optional<User> result = userService.findById(99L);
 
-        // Assert
-        assertFalse(result.isPresent());
-        verify(repository, times(1)).findById(999L);
+        assertThat(result).isEmpty();
+        verify(repository, times(1)).findById(99L);
     }
 
     @Test
-    void testFindByEmail_UserExists_ReturnsUser() {
-        // Arrange
+    void testFindByEmail_ExistingEmail_ReturnsUser() {
         when(repository.findByEmail("john@test.com")).thenReturn(Optional.of(testUser));
 
-        // Act
         Optional<User> result = userService.findByEmail("john@test.com");
 
-        // Assert
-        assertTrue(result.isPresent());
-        assertEquals("john@test.com", result.get().getEmail());
+        assertThat(result).isPresent();
+        assertThat(result.get().getEmail()).isEqualTo("john@test.com");
         verify(repository, times(1)).findByEmail("john@test.com");
     }
 
     @Test
-    void testFindByRestaurantId_ReturnsUserList() {
-        // Arrange
-        List<User> users = Arrays.asList(testUser);
-        when(repository.findByRestaurantId(1L)).thenReturn(users);
+    void testFindByEmail_NonExistingEmail_ReturnsEmpty() {
+        when(repository.findByEmail("nonexistent@test.com")).thenReturn(Optional.empty());
 
-        // Act
-        List<User> result = userService.findByRestaurantId(1L);
+        Optional<User> result = userService.findByEmail("nonexistent@test.com");
 
-        // Assert
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("John Doe", result.get(0).getName());
-        verify(repository, times(1)).findByRestaurantId(1L);
+        assertThat(result).isEmpty();
     }
 
     @Test
-    void testDeleteById_Success() {
-        // Arrange
-        when(repository.existsById(1L)).thenReturn(true);
-        doNothing().when(repository).deleteById(1L);
-
-        // Act
-        userService.deleteById(1L, 2L); // Different user IDs
-
-        // Assert
-        verify(repository, times(1)).deleteById(1L);
-    }
-
-    @Test
-    void testDeleteById_SelfDeletion_ThrowsException() {
-        // Arrange - Same user ID
-        Long userId = 1L;
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.deleteById(userId, userId);
-        });
-        assertEquals("You cannot delete your own account", exception.getMessage());
-    }
-
-    @Test
-    void testDeleteById_UserNotFound_ThrowsException() {
-        // Arrange
-        when(repository.existsById(999L)).thenReturn(false);
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.deleteById(999L, 1L);
-        });
-        assertEquals("User not found", exception.getMessage());
-    }
-
-    @Test
-    void testExistsByEmail_EmailExists_ReturnsTrue() {
-        // Arrange
+    void testExistsByEmail_ExistingEmail_ReturnsTrue() {
         when(repository.existsByEmail("john@test.com")).thenReturn(true);
 
-        // Act
-        boolean exists = userService.existsByEmail("john@test.com");
+        boolean result = userService.existsByEmail("john@test.com");
 
-        // Assert
-        assertTrue(exists);
+        assertThat(result).isTrue();
         verify(repository, times(1)).existsByEmail("john@test.com");
     }
 
     @Test
-    void testExistsByEmail_EmailNotExists_ReturnsFalse() {
-        // Arrange
-        when(repository.existsByEmail("notfound@test.com")).thenReturn(false);
+    void testExistsByEmail_NonExistingEmail_ReturnsFalse() {
+        when(repository.existsByEmail("nonexistent@test.com")).thenReturn(false);
 
-        // Act
-        boolean exists = userService.existsByEmail("notfound@test.com");
+        boolean result = userService.existsByEmail("nonexistent@test.com");
 
-        // Assert
-        assertFalse(exists);
-        verify(repository, times(1)).existsByEmail("notfound@test.com");
+        assertThat(result).isFalse();
     }
 
     @Test
-
-    void testUpdate_Success() {
-        // Arrange
-        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
+    void testSave_ValidDTO_ReturnsUser() {
         when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
         when(restaurantRepository.findById(1L)).thenReturn(Optional.of(testRestaurant));
+        when(passwordEncoder.encode("password123")).thenReturn("$2a$10$hashedPassword");
         when(repository.save(any(User.class))).thenReturn(testUser);
 
+        User result = userService.save(testUserDTO, 1L);
 
-        User updatedUser = userService.update(1L, testUserDTO, 1L);
-
-
-        assertNotNull(updatedUser);
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo("John Doe");
         verify(repository, times(1)).save(any(User.class));
     }
 
     @Test
-    void testUpdate_EmailChanged_DuplicateEmail_ThrowsException() {
-        // Arrange
-        testUser.setEmail("old@test.com");
-        testUserDTO.setEmail("new@test.com");
+    void testSave_WithSalaryFields_ReturnsSavedUser() {
+        testUserDTO.setSalaryType(SalaryType.HOURLY);
+        testUserDTO.setHourlyRate(15.0);
 
-        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
-        when(repository.existsByEmail("new@test.com")).thenReturn(true);
-
-
-        assertThrows(RuntimeException.class, () -> {
-            userService.update(1L, testUserDTO, 1L);
-        });
-    }
-
-    @Test
-    void testUpdate_PasswordTooShort_ThrowsException() {
-        // Arrange
-        testUserDTO.setPassword("short");
-        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
-
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.update(1L, testUserDTO, 1L);
-        });
-        assertEquals("Password must be at least 8 characters", exception.getMessage());
-    }
-
-    @Test
-    void testToggleActive_Success() {
-        // Arrange
-        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+        when(restaurantRepository.findById(1L)).thenReturn(Optional.of(testRestaurant));
+        when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$hashedPassword");
         when(repository.save(any(User.class))).thenReturn(testUser);
 
-        // Act
-        User toggledUser = userService.toggleActive(1L, 2L); // Different user IDs
+        User result = userService.save(testUserDTO, 1L);
 
-        // Assert
-        assertNotNull(toggledUser);
+        assertThat(result).isNotNull();
         verify(repository, times(1)).save(any(User.class));
     }
 
     @Test
-    void testToggleActive_SelfDeactivation_ThrowsException() {
-        // Arrange - Same user ID
-        Long userId = 1L;
+    void testSave_RoleNotFound_ThrowsException() {
+        when(roleRepository.findById(1L)).thenReturn(Optional.empty());
 
-        // Act & Assert
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.toggleActive(userId, userId);
-        });
-        assertEquals("You cannot deactivate your own account", exception.getMessage());
+        assertThatThrownBy(() -> userService.save(testUserDTO, 1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Role not found");
+
+        verify(repository, never()).save(any(User.class));
+    }
+
+    @Test
+    void testUpdate_ValidDTO_ReturnsUpdatedUser() {
+        UserDTO updateDTO = UserDTO.builder()
+                .name("Jane Doe")
+                .email("jane@test.com")
+                .roleId(1L)
+                .isActive(true)
+                .build();
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+        when(repository.save(any(User.class))).thenReturn(testUser);
+
+        User result = userService.update(1L, updateDTO, 2L);
+
+        assertThat(result).isNotNull();
+        verify(repository, times(1)).save(any(User.class));
+    }
+
+    @Test
+    void testUpdate_SameUserAsCurrentUser_ThrowsException() {
+        assertThatThrownBy(() -> userService.update(1L, testUserDTO, 1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("You cannot edit your own account");
+
+        verify(repository, never()).save(any(User.class));
+    }
+
+    @Test
+    void testUpdate_UserNotFound_ThrowsException() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.update(99L, testUserDTO, 1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found");
+
+        verify(repository, never()).save(any(User.class));
+    }
+
+    @Test
+    void testUpdate_WithSalaryFields_UpdatesSalary() {
+        testUserDTO.setSalaryType(SalaryType.MONTHLY);
+        testUserDTO.setMonthlySalary(5000.0);
+
+        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+        when(repository.save(any(User.class))).thenReturn(testUser);
+
+        User result = userService.update(1L, testUserDTO, 2L);
+
+        assertThat(result).isNotNull();
+        verify(repository, times(1)).save(any(User.class));
+    }
+
+    @Test
+    void testDeleteById_ValidId_DeletesUser() {
+        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
+
+        userService.deleteById(1L, 2L);
+
+        verify(repository, times(1)).delete(testUser);
+    }
+
+    @Test
+    void testDeleteById_SameUserAsCurrentUser_ThrowsException() {
+        assertThatThrownBy(() -> userService.deleteById(1L, 1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("cannot delete your own account");
+
+        verify(repository, never()).delete(any(User.class));
+    }
+
+    @Test
+    void testDeleteById_UserNotFound_ThrowsException() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.deleteById(99L, 1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found");
+
+        verify(repository, never()).delete(any(User.class));
+    }
+
+    @Test
+    void testToggleActive_ActiveUser_DeactivatesUser() {
+        testUser.setIsActive(true);
+        when(repository.findById(1L)).thenReturn(Optional.of(testUser));
+        when(repository.save(any(User.class))).thenReturn(testUser);
+
+        User result = userService.toggleActive(1L, 2L);
+
+        assertThat(result).isNotNull();
+        verify(repository, times(1)).save(any(User.class));
+    }
+
+    @Test
+    void testToggleActive_SameUserAsCurrentUser_ThrowsException() {
+        assertThatThrownBy(() -> userService.toggleActive(1L, 1L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("cannot deactivate your own account");
+
+        verify(repository, never()).save(any(User.class));
+    }
+
+    @Test
+    void testToggleActive_UserNotFound_ThrowsException() {
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.toggleActive(99L, 1L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found");
+    }
+
+    @Test
+    void testFindByRestaurantId_ReturnsUsers() {
+        when(repository.findByRestaurantId(1L)).thenReturn(List.of(testUser));
+
+        List<User> result = userService.findByRestaurantId(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getName()).isEqualTo("John Doe");
+        verify(repository, times(1)).findByRestaurantId(1L);
     }
 }

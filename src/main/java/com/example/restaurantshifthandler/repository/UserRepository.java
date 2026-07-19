@@ -13,5 +13,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByRestaurantId(Long restaurantId);
     List<User> findByIsActive(Boolean isActive);
     boolean existsByEmail(String email);
+    List<User> findByRestaurantIdAndIsActive(Long restaurantId, Boolean isActive);
 
 }

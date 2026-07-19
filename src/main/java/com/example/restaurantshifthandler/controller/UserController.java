@@ -42,7 +42,7 @@ public class UserController {
 
     @GetMapping("/restaurant/{restaurantId}")
     public List<User> getByRestaurant(@PathVariable Long restaurantId) {
-        return service.findByRestaurant(restaurantId);
+        return service.findByRestaurantId(restaurantId);
     }
 
     @PostMapping

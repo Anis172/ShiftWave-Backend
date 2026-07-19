@@ -15,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -84,14 +86,14 @@ public class ShiftService {
 
 public Shift clockIn(Long id) {
     return repository.findById(id).map(shift -> {
-        shift.setClockInTime(LocalDateTime.now());
+        shift.setClockInTime(LocalDateTime.now(ZoneOffset.UTC));
         shift.setStatus(ShiftStatus.ACTIVE);
         return repository.save(shift);
     }).orElseThrow(() -> new RuntimeException("Shift not found: " + id));
 }
     public Shift clockOut(Long id) {
         return repository.findById(id).map(shift -> {
-            shift.setClockOutTime(LocalDateTime.now());
+            shift.setClockOutTime(LocalDateTime.now(ZoneOffset.UTC));
             shift.setStatus(ShiftStatus.COMPLETED);
             return repository.save(shift);
         }).orElseThrow(() -> new RuntimeException("Shift not found: " + id));
@@ -162,6 +164,7 @@ public Shift clockIn(Long id) {
                 .id(shift.getId())
                 .workerName(shift.getWorker().getName())
                 .roleName(shift.getRole().getName())
+                .workerId(shift.getWorker().getId()).roleId(shift.getRole().getId())
                 .status(shift.getStatus())
                 .scheduledStart(shift.getScheduledStart())
                 .scheduledEnd(shift.getScheduledEnd())

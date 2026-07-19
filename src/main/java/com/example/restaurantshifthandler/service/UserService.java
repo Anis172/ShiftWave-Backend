@@ -1,10 +1,13 @@
 package com.example.restaurantshifthandler.service;
 
 import com.example.restaurantshifthandler.dto.UserDTO;
+import com.example.restaurantshifthandler.entity.Role;
 import com.example.restaurantshifthandler.entity.User;
-import com.example.restaurantshifthandler.repository.RestaurantRepository;
+import com.example.restaurantshifthandler.entity.Restaurant;
+import com.example.restaurantshifthandler.exception.ResourceNotFoundException;
 import com.example.restaurantshifthandler.repository.RoleRepository;
 import com.example.restaurantshifthandler.repository.UserRepository;
+import com.example.restaurantshifthandler.repository.RestaurantRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,13 +20,9 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository repository;
-    private final PasswordEncoder passwordEncoder;
     private final RoleRepository roleRepository;
     private final RestaurantRepository restaurantRepository;
-
-    public Optional<User> findByEmail(String email) {
-        return repository.findByEmail(email);
-    }
+    private final PasswordEncoder passwordEncoder;
 
     public List<User> findAll() {
         return repository.findAll();
@@ -33,8 +32,8 @@ public class UserService {
         return repository.findById(id);
     }
 
-    public List<User> findByRestaurant(Long restaurantId) {
-        return repository.findByRestaurantId(restaurantId);
+    public Optional<User> findByEmail(String email) {
+        return repository.findByEmail(email);
     }
 
     public List<User> findByRestaurantId(Long restaurantId) {
@@ -42,92 +41,81 @@ public class UserService {
     }
 
     public User save(UserDTO dto, Long restaurantId) {
+        Role role = roleRepository.findById(dto.getRoleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
 
-        if (dto.getPassword() == null || dto.getPassword().trim().isEmpty()) {
-            throw new RuntimeException("Password is required");
-        }
-        if (dto.getPassword().length() < 8) {
-            throw new RuntimeException("Password must be at least 8 characters");
-        }
-
-
-        if (existsByEmail(dto.getEmail())) {
-            throw new RuntimeException("Email already exists");
-        }
+        Restaurant restaurant = restaurantRepository.findById(restaurantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Restaurant not found"));
 
         User user = User.builder()
                 .name(dto.getName())
                 .email(dto.getEmail())
                 .password(passwordEncoder.encode(dto.getPassword()))
-                .role(roleRepository.findById(dto.getRoleId())
-                        .orElseThrow(() -> new RuntimeException("Role not found")))
-                .restaurant(restaurantRepository.findById(restaurantId)
-                        .orElseThrow(() -> new RuntimeException("Restaurant not found")))
+                .role(role)
+                .restaurant(restaurant)
                 .isActive(dto.getIsActive() != null ? dto.getIsActive() : true)
+                .salaryType(dto.getSalaryType())
+                .hourlyRate(dto.getHourlyRate())
+                .dailyRate(dto.getDailyRate())
+                .monthlySalary(dto.getMonthlySalary())
                 .build();
 
         return repository.save(user);
     }
 
-    public void deleteById(Long id, Long currentUserId) {
+    public User update(Long id, UserDTO dto, Long currentUserId) {
 
-        if (currentUserId.equals(id)) {
+        if (id.equals(currentUserId)) {
+            throw new RuntimeException("You cannot edit your own account");
+        }
+        User user = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
+
+        Role role = roleRepository.findById(dto.getRoleId())
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
+
+        user.setName(dto.getName());
+        user.setEmail(dto.getEmail());
+        user.setRole(role);
+
+        if (dto.getIsActive() != null) {
+            user.setIsActive(dto.getIsActive());
+        }
+
+        if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        }
+
+        user.setSalaryType(dto.getSalaryType());
+        user.setHourlyRate(dto.getHourlyRate());
+        user.setDailyRate(dto.getDailyRate());
+        user.setMonthlySalary(dto.getMonthlySalary());
+
+        return repository.save(user);
+    }
+
+    public void deleteById(Long id, Long currentUserId) {
+        if (id.equals(currentUserId)) {
             throw new RuntimeException("You cannot delete your own account");
         }
 
+        User user = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
 
-        if (!repository.existsById(id)) {
-            throw new RuntimeException("User not found");
-        }
-
-        repository.deleteById(id);
-    }
-
-    public User update(Long id, UserDTO dto, Long restaurantId) {
-        return repository.findById(id).map(user -> {
-
-
-            if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
-                if (dto.getPassword().length() < 8) {
-                    throw new RuntimeException("Password must be at least 8 characters");
-                }
-            }
-
-
-            if (!user.getEmail().equals(dto.getEmail())) {
-                if (existsByEmail(dto.getEmail())) {
-                    throw new RuntimeException("Email already exists");
-                }
-            }
-
-            user.setName(dto.getName());
-            user.setEmail(dto.getEmail());
-            user.setRole(roleRepository.findById(dto.getRoleId())
-                    .orElseThrow(() -> new RuntimeException("Role not found")));
-            user.setRestaurant(restaurantRepository.findById(restaurantId)
-                    .orElseThrow(() -> new RuntimeException("Restaurant not found")));
-            user.setIsActive(dto.getIsActive());
-
-            if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
-                user.setPassword(passwordEncoder.encode(dto.getPassword()));
-            }
-
-            return repository.save(user);
-        }).orElseThrow(() -> new RuntimeException("User not found: " + id));
+        repository.delete(user);
     }
 
     public User toggleActive(Long id, Long currentUserId) {
-        //  Prevent self-deactivation
-        if (currentUserId.equals(id)) {
+        if (id.equals(currentUserId)) {
             throw new RuntimeException("You cannot deactivate your own account");
         }
 
-        return repository.findById(id).map(user -> {
-            user.setIsActive(!user.getIsActive());
-            return repository.save(user);
-        }).orElseThrow(() -> new RuntimeException("User not found: " + id));
-    }
+        User user = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + id));
 
+        user.setIsActive(!user.getIsActive());
+        return repository.save(user);
+    }
     public boolean existsByEmail(String email) {
         return repository.existsByEmail(email);
     }

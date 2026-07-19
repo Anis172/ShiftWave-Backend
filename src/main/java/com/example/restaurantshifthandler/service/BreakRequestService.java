@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,7 +48,6 @@ public class BreakRequestService {
 
         breakRequest.setWorker(fullWorker);
 
-        //  Check if worker already has an active/pending/approved break
         List<BreakRequest> existingBreaks = repository.findByWorkerId(fullWorker.getId());
 
         for (BreakRequest existing : existingBreaks) {
@@ -62,31 +62,25 @@ public class BreakRequestService {
             }
         }
 
-        //  Get role from SHIFT, not from USER
         Long shiftRoleId = breakRequest.getShift().getRole().getId();
         Long restaurantId = breakRequest.getShift().getRestaurant().getId();
 
-        //  Count active workers with THIS SHIFT ROLE
         int activeWorkers = shiftRepository
                 .countByRoleIdAndStatus(shiftRoleId, ShiftStatus.ACTIVE);
 
-        //  NEW: Count workers ALREADY on ACTIVE break with same role
         int workersOnBreak = repository.countActiveBreaksByRoleId(shiftRoleId);
 
-        //  Calculate available workers after approving THIS break
         int workersAvailableAfter = activeWorkers - workersOnBreak - 1;
 
-        // Get coverage rule for THIS SHIFT ROLE
         CoverageRule rule = coverageRuleRepository
                 .findByRestaurantIdAndRoleId(restaurantId, shiftRoleId)
                 .orElse(null);
 
-        //  FIXED: Check if enough workers will be available
         if (rule == null || workersAvailableAfter >= rule.getMinimumWorkers()) {
             breakRequest.setStatus(BreakStatus.APPROVED);
-            breakRequest.setStartTime(LocalDateTime.now());
+            breakRequest.setStartTime(LocalDateTime.now(ZoneOffset.UTC)); // ✅ Fixed!
             int durationMinutes = getBreakDuration(breakRequest.getBreakType());
-            breakRequest.setEndTime(LocalDateTime.now().plusMinutes(durationMinutes));
+            breakRequest.setEndTime(LocalDateTime.now(ZoneOffset.UTC).plusMinutes(durationMinutes)); // ✅ Fixed!
         } else {
             breakRequest.setStatus(BreakStatus.DENIED);
 
@@ -161,7 +155,7 @@ public class BreakRequestService {
 
     public BreakRequest start(Long id) {
         return repository.findById(id).map(breakRequest -> {
-            breakRequest.setStartTime(LocalDateTime.now());
+            breakRequest.setStartTime(LocalDateTime.now(ZoneOffset.UTC));
             breakRequest.setStatus(BreakStatus.ACTIVE);
             return repository.save(breakRequest);
         }).orElseThrow(() -> new RuntimeException("BreakRequest not found: " + id));
@@ -169,7 +163,7 @@ public class BreakRequestService {
 
     public BreakRequest complete(Long id) {
         return repository.findById(id).map(breakRequest -> {
-            breakRequest.setEndTime(LocalDateTime.now());
+            breakRequest.setEndTime(LocalDateTime.now(ZoneOffset.UTC));
             breakRequest.setStatus(BreakStatus.COMPLETED);
             return repository.save(breakRequest);
         }).orElseThrow(() -> new RuntimeException("BreakRequest not found: " + id));

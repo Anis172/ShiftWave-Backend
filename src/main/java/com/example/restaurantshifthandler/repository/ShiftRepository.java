@@ -35,4 +35,9 @@ public interface ShiftRepository extends JpaRepository<Shift, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable);
+    List<Shift> findByWorkerIdAndStatusAndClockOutTimeBetween(
+            Long workerId,
+            ShiftStatus status,
+            LocalDateTime start,
+            LocalDateTime end);
 }

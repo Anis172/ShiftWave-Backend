@@ -21,6 +21,8 @@ public class ShiftResponseDTO {
     private String workerName;
     private String roleName;
     private ShiftStatus status;
+    private Long workerId;
+    private Long roleId;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'", timezone = "UTC")
     private LocalDateTime scheduledStart;
