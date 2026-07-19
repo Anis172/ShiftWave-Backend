@@ -119,7 +119,7 @@ public Shift clockIn(Long id) {
     }
 
     public void updateExpiredShifts() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
         List<Shift> scheduledShifts = repository.findByStatus(ShiftStatus.SCHEDULED);
         for (Shift shift : scheduledShifts) {
