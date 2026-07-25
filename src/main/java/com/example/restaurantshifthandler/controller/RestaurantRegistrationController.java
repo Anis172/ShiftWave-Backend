@@ -7,11 +7,12 @@ import com.example.restaurantshifthandler.repository.RestaurantRepository;
 import com.example.restaurantshifthandler.repository.RoleRepository;
 import com.example.restaurantshifthandler.repository.UserRepository;
 import com.example.restaurantshifthandler.security.JwtUtil;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
@@ -71,12 +72,15 @@ public class RestaurantRegistrationController {
 
         String token = jwtUtil.generateToken(savedManager.getEmail());
 
-        Cookie cookie = new Cookie("token", token);
-        cookie.setHttpOnly(true);
-        cookie.setSecure(true);
-        cookie.setPath("/");
-        cookie.setMaxAge(60 * 60 * 10);
-        response.addCookie(cookie);
+        ResponseCookie cookie = ResponseCookie.from("token", token)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .maxAge(60 * 60 * 10)
+                .sameSite("None") // ✅ Required for cross-domain!
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
